@@ -1,0 +1,209 @@
+---
+title: "R Notebook to analyse the cell wall microarray data"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. 
+When you execute code within the notebook, the results appear beneath the code. 
+
+#In this notebook, you will analyse the cell wall data you processed in the Linux and Python steps of the pipeline.
+
+Your Task
+Work through the code chunks in the following notebook to read in and analyse your processed data on the abundance of cell wall components.
+
+Follow the instructions for each code chunk, adding code where specified and using the exact variable names supplied. 
+You can add your own additional code chunks as needed to gain further practice as you work through the notebook.
+
+```{r}
+#run this cell to clear R's brain, always a good first step in any notebook you write
+rm(list=ls())
+```
+
+First, run the following chunk to load the necessary libraries.
+
+```{r}
+#run this cell to load the necessary libraries
+library(assertthat)
+library(stringr)
+library(readr)
+library(dplyr)
+library(ggplot2)
+#specify this to enable plotting to work
+options(bitmapType='cairo')
+library(assertthat)
+library(stringr)
+library(ottr)
+```
+
+#Reading in your data
+
+Add code to the chunk below that does the following:
+* Reads in the data file you created using Python called `data.reformat.csv` and assigns it to a data frame called `cw`
+```{r}
+#Read in the cell wall data to a data frame called `cw`
+################## ADD YOUR CODE UNDER THIS LINE #######
+cw<-read.csv('data.reformat.csv', header=TRUE, sep=",", fileEncoding = "UTF-8-BOM", na.strings="NA")
+
+```
+
+```{r}
+# Run this chunk to check your answers
+. = ottr::check("tests/cw_check_data.R")
+```
+
+#Extracting your data into different cell wall components
+You are informed that the 17 antibodies in your dataset probe three different kinds of cell wall polysaccharides.
+Run the code chunk below to generate a vector of antibody names for each kind of cell wall component.
+
+```{r}
+#Run this cell to define the 3 groups of polysaccharides.
+pectins <- c("JIM5","JIM7","LM18","LM19","LM8","LM5","LM6")
+hemicelluloses <- c("LM21","LM23","LM15","LM24","LM25","LM10","LM11")
+glycoproteins <- c("JIM20","LM1","LM2")
+```
+
+Add code to the chunk below that does the following:
+* Create a data frame called `cw.pectins` containing only the rows for those antibodies in the pectins group.
+* Create a data frame called `cw.hemi` containing only the rows for those antibodies in the hemicelluloses group.
+* Create a data frame called `cw.glyco` containing only the rows for those antibodies in the glycoproteins group.
+* HINT: you can combine dplyr's filter() with use of the %in% function, which returns a Boolean (e.g. "JIM5" %in% pectins returns TRUE).
+
+```{r}
+#Create the three data frames for the 3 groups of polysaccharides.
+################## ADD YOUR CODE UNDER THIS LINE #######
+cw.pectins<-filter(cw, Antibody %in% pectins == TRUE)
+cw.hemi<-filter(cw, Antibody %in% hemicelluloses == TRUE)
+cw.glyco<-filter(cw, Antibody %in% glycoproteins == TRUE)
+
+```
+
+```{r}
+# Run this chunk to check your answers
+. = ottr::check("tests/cw_glycos.R")
+```
+
+#Next, we learn that pectin components can be accurately quantified from the CDTA extraction only.
+#Meanwhile, the NaoH extraction works for the hemicellulose or glycoprotein components.
+
+Add code to the chunk below that does the following:
+* Extracts only those rows from the `cw.pectins` data frame that contain the CDTA extraction data and name the data frame `cw.pectins.cdta`
+* Extracts only those rows from the `cw.hemi` data frame that contain the NaOH extraction data and name the data frame `cw.hemi.naoh`
+* Extracts only those rows from the `cw.glyco` data frame that contain the NaOH extraction data and name the data frame `cw.glyco.naoh`
+
+```{r}
+#Create three new data frames containing the correct cell wall extraction information
+################## ADD YOUR CODE UNDER THIS LINE #######
+cw.pectins.cdta<-filter(cw.pectins, Extraction == 'CDTA')
+cw.hemi.naoh<-filter(cw.hemi, Extraction == 'NaOH')
+cw.glyco.naoh<-filter(cw.glyco, Extraction == 'NaOH')
+
+```
+
+```{r}
+# Run this chunk to check your answers
+. = ottr::check("tests/cw_glycos_extract.R")
+```
+
+#Now that you have some processed data, let's do some plotting.
+
+Add code to the chunk below that does the following:
+* Create a box plot of abundance as a function of variety for the pectins data in `cw.pectins.cdta`
+```{r}
+#Show a box plot of "abundance" as a function of "variety"
+################## ADD YOUR CODE UNDER THIS LINE #######
+ggplot(cw.pectins.cdta, aes(x=Variety, y=Abundance)) + geom_boxplot() + theme_classic() + xlab("Variety of Pectin") + ylab("Abundance")
+
+```
+From the graph, it doesn't look like to abundance of pectins is very different between varieties, at least not when we consider all the pectin components.
+
+#Let's have a look at the abundance of individual pectin components.
+
+Add code to the chunk below that does the following:
+* Plot the abundance values for antibody `LM6` as a function of `variety`. 
+* HINT: you can supply ggplot with the filtered `cw.pectins.cdta` data frame using filter().
+
+```{r}
+#Show a box plot of abundance values as a function of variety for the antibody `LM6`.
+################## ADD YOUR CODE UNDER THIS LINE #######
+ggplot(filter(cw.pectins.cdta, Antibody == 'LM6'), aes(x=Variety, y=Abundance)) + geom_boxplot() + theme_classic() + xlab("Variety of Pectin with Antibody LM6") + ylab("Abundance")
+
+```
+
+Now this plot looks a lot more interesting. There is a clear difference between varieties in the abundance of the `LM6` component.
+
+#Does component abundance relate to disease resistance?
+Next, you want to know if the `LM6` component shows a difference in abundance between varieties that are disease resistant and those that are not.
+You are told that the two most resistant varieties are Sarpo Shona and Sarpo Mira. All other varieties show varying degrees of susceptibility.
+
+Add code to the chunk below that does the following:
+* Create a new vector called `resistant` containing the values Sarpo Shona and Sarpo Mira (Hint: use c())
+
+```{r}
+#Create a new vector called `resistant` containing the values Sarpo Shona and Sarpo Mira
+################## ADD YOUR CODE UNDER THIS LINE #######
+resistant<-c('Sarpo Shona', 'Sarpo Mira')
+```
+
+```{r}
+# Run this chunk to check your answers
+. = ottr::check("tests/cw_resistant.R")
+```
+
+Add code to the chunk below that does the following:
+* Modify your data frame `cw.pectins.cdta` to include a new column called `Resistant` that contains a boolean value for resistance (TRUE or FALSE) 
+* HINT: Combine the use of mutate() and %in%
+
+```{r}
+#Modify your data frame `cw.pectins.cdta` to include a new column called `Resistant` that contains a boolean value for resistance
+################## ADD YOUR CODE UNDER THIS LINE #######
+cw.pectins.cdta<-mutate(cw.pectins.cdta, Resistant = Variety %in% resistant)
+
+```
+
+```{r}
+# Run this chunk to check your answers
+. = ottr::check("tests/cw_resistant_bool.R")
+```
+
+To answer our question, now make another box plot to see the distribution of `LM6` abundance by resistance instead of by variety.
+
+```{r}
+#Show a box plot of abundance values as a function of resistance for the antibody `LM6`.
+################## ADD YOUR CODE UNDER THIS LINE #######
+ggplot(filter(cw.pectins.cdta, Antibody == 'LM6'), aes(x=Resistant, y=Abundance)) + geom_boxplot() + theme_classic() + xlab("Resistance of Pectin with Antibody LM6") + ylab("Abundance")
+
+```
+
+Now this plot should indeed look even more interesting! 
+Hopefully, you can see that the abundance for `LM6` is very different in the two resistant varieties compared with the others.
+In fact, the two boxes do not overlap at all!
+
+#Does component abundance relate to disease resistance in both farming systems?
+Now, we might be interested to see whether the same effect can be observed in both farming systems, organic and conventional.
+
+Add code to the chunk below that does the following:
+* Use facet_wrap() to create two side by side box plots like the one you made above but for the two farming systems separately.
+
+```{r}
+#Show a box plot of abundance values as a function of variety for the antibody LM6.
+################## ADD YOUR CODE UNDER THIS LINE #######
+ggplot(filter(cw.pectins.cdta, Antibody == 'LM6'), aes(x=Resistant, y=Abundance)) + geom_boxplot() + theme_classic() + xlab("Variety of Pectin with Antibody LM6") + ylab("Abundance") + facet_wrap(~System)
+```
+
+Hopefully you can see from your box plot that the same pattern is observed in both growing systems, though there might be a bigger difference between the
+resistant and susceptible varieties when they are grown in the conventional system. 
+
+Next steps could be to investigate the role of the cell wall component assayed by the `LM6` antibody in disease resistance.
+
+This is the end of the notebook.
+
+
+
+
+
+
+
+
+
+
+
